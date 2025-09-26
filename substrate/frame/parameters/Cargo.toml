@@ -26,6 +26,7 @@ pallet-example-basic = { workspace = true, default-features = true }
 sp-io = { workspace = true, default-features = true }
 
 [features]
+genesis-build = []
 default = ["std"]
 std = [
 	"codec/std",

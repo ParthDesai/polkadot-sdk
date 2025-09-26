@@ -139,11 +139,9 @@ use sp_core::serde;
 
 /// The key type of a parameter.
 type KeyOf<T> = <<T as Config>::RuntimeParameters as AggregatedKeyValue>::Key;
-type SerializableKeyOf<T> = <<T as Config>::SerializableRuntimeParameters as AggregatedKeyValue>::Key;
 
 /// The value type of a parameter.
 type ValueOf<T> = <<T as Config>::RuntimeParameters as AggregatedKeyValue>::Value;
-type SerializableValueOf<T> = <<T as Config>::SerializableRuntimeParameters as AggregatedKeyValue>::Value;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -156,15 +154,17 @@ pub mod pallet {
 		#[allow(deprecated)]
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
+		#[pallet::no_default_bounds]
+		#[cfg(not(feature = "std"))]
 		/// The overarching KV type of the parameters.
 		///
 		/// Usually created by [`frame_support::dynamic_params`] or equivalent.
-		#[pallet::no_default_bounds]
 		type RuntimeParameters: AggregatedKeyValue;
-
-		/// Serializable runtime parameters
-		#[pallet::no_default_bounds]
-		type SerializableRuntimeParameters: AggregatedKeyValue + serde::Serialize + serde::de::DeserializeOwned;
+		#[cfg(feature = "std")]
+		/// The overarching KV type of the parameters with serde serialization implemented
+		///
+		/// Usually created by [`frame_support::dynamic_params`] or equivalent.
+		type RuntimeParameters: AggregatedKeyValue + serde::Serialize + serde::de::DeserializeOwned;
 
 		/// The origin which may update a parameter.
 		///
@@ -198,36 +198,46 @@ pub mod pallet {
 	pub type Parameters<T: Config> =
 		StorageMap<_, Blake2_128Concat, KeyOf<T>, ValueOf<T>, OptionQuery>;
 
-	#[pallet::storage]
-	pub type SerializableParameters<T: Config> =
-	StorageMap<_, Blake2_128Concat, SerializableKeyOf<T>, SerializableValueOf<T>, OptionQuery>;
-
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		/// Default runtime parameters
-		pub default_runtime_parameters: Vec<T::SerializableRuntimeParameters>,
+		#[cfg(feature = "genesis-build")]
+		pub default_runtime_parameters: Vec<T::RuntimeParameters>,
+
+		#[cfg(not(feature = "genesis-build"))]
+		_phantom: PhantomData<T>
 	}
 
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
+				#[cfg(feature = "genesis-build")]
 				default_runtime_parameters: Default::default(),
+
+				#[cfg(not(feature = "genesis-build"))]
+				_phantom: PhantomData
 			}
 		}
 	}
 
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+		#[cfg(feature = "genesis-build")]
 		fn build(&self) {
 			for parameters in self.default_runtime_parameters.iter() {
 				let (key, new) = parameters.clone().into_parts();
 
 				let mut old = None;
-				SerializableParameters::<T>::mutate(&key, |v| {
+				Parameters::<T>::mutate(&key, |v| {
 					old = v.clone();
 					*v = new.clone();
 				});
 			}
+		}
+
+		#[cfg(not(feature = "genesis-build"))]
+		fn build(&self) {
+
 		}
 	}
 
@@ -277,9 +287,6 @@ pub mod pallet {
 			type RuntimeEvent = ();
 			#[inject_runtime_type]
 			type RuntimeParameters = ();
-
-			#[inject_runtime_type]
-			type SerializableRuntimeParameters = ();
 
 			type AdminOrigin = frame_support::traits::AsEnsureOriginWithArg<
 				frame_system::EnsureRoot<Self::AccountId>,
