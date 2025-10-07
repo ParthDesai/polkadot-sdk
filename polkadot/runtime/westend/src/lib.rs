@@ -290,11 +290,6 @@ pub mod dynamic_params {
 	}
 }
 
-#[dynamic_params(SerializableRuntimeParameters, pallet_parameters::SerializableParameters::<Runtime>, impl_serialize = true)]
-pub mod serializable_dynamic_params {
-
-}
-
 
 #[cfg(feature = "runtime-benchmarks")]
 impl Default for RuntimeParameters {
@@ -309,7 +304,6 @@ impl Default for RuntimeParameters {
 impl pallet_parameters::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeParameters = RuntimeParameters;
-	type SerializableRuntimeParameters = SerializableRuntimeParameters;
 	type AdminOrigin = DynamicParameterOrigin;
 	type WeightInfo = weights::pallet_parameters::WeightInfo<Runtime>;
 }

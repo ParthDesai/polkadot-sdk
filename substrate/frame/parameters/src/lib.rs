@@ -134,7 +134,9 @@ mod weights;
 pub use pallet::*;
 pub use weights::WeightInfo;
 
+#[cfg(feature = "serde")]
 use sp_runtime::Vec;
+#[cfg(feature = "serde")]
 use sp_core::serde;
 
 /// The key type of a parameter.
@@ -155,12 +157,12 @@ pub mod pallet {
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		#[pallet::no_default_bounds]
-		#[cfg(not(feature = "std"))]
+		#[cfg(not(feature = "serde"))]
 		/// The overarching KV type of the parameters.
 		///
 		/// Usually created by [`frame_support::dynamic_params`] or equivalent.
 		type RuntimeParameters: AggregatedKeyValue;
-		#[cfg(feature = "std")]
+		#[cfg(feature = "serde")]
 		/// The overarching KV type of the parameters with serde serialization implemented
 		///
 		/// Usually created by [`frame_support::dynamic_params`] or equivalent.
@@ -201,20 +203,20 @@ pub mod pallet {
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
 		/// Default runtime parameters
-		#[cfg(feature = "genesis-build")]
+		#[cfg(feature = "serde")]
 		pub default_runtime_parameters: Vec<T::RuntimeParameters>,
 
-		#[cfg(not(feature = "genesis-build"))]
+		#[cfg(not(feature = "serde"))]
 		_phantom: PhantomData<T>
 	}
 
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			GenesisConfig {
-				#[cfg(feature = "genesis-build")]
+				#[cfg(feature = "serde")]
 				default_runtime_parameters: Default::default(),
 
-				#[cfg(not(feature = "genesis-build"))]
+				#[cfg(not(feature = "serde"))]
 				_phantom: PhantomData
 			}
 		}
@@ -222,7 +224,7 @@ pub mod pallet {
 
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
-		#[cfg(feature = "genesis-build")]
+		#[cfg(feature = "serde")]
 		fn build(&self) {
 			for parameters in self.default_runtime_parameters.iter() {
 				let (key, new) = parameters.clone().into_parts();
@@ -235,7 +237,7 @@ pub mod pallet {
 			}
 		}
 
-		#[cfg(not(feature = "genesis-build"))]
+		#[cfg(not(feature = "serde"))]
 		fn build(&self) {
 
 		}
